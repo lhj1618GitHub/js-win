@@ -7,7 +7,7 @@
 
 #### 安装教程
 
-1.  方式一：下载后直接导入篡改猴。
+1.  方式一：下载后直接导入篡改猴类管理器。[暴力猴](https://violentmonkey.github.io/)-[GitHub](https://github.com/violentmonkey/violentmonkey/releases) / [篡改猴](https://www.tampermonkey.net/) / [脚本猫](https://scriptcat.org/zh-CN)-[GitHub](https://github.com/scriptscat/scriptcat)
 2.  方式二：下载后用记事本打开，复制全部内容，覆盖粘贴到篡改猴空白脚本内。
 3. 同步[Gitee](https://gitee.com/lhj1618/js-win)
 
