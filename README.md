@@ -4,7 +4,6 @@
 
 自动跳过中转页；悬停预览放大图片；搜索引擎切换器；视频速度控制；哔哩哔哩-免登录最高画质；
 
-
 #### 安装教程
 
 1.  方式一：下载后直接导入篡改猴类管理器。[暴力猴](https://violentmonkey.github.io/)-[GitHub](https://github.com/violentmonkey/violentmonkey/releases) / [篡改猴](https://www.tampermonkey.net/) / [脚本猫](https://scriptcat.org/zh-CN)-[GitHub](https://github.com/scriptscat/scriptcat)
@@ -20,3 +19,7 @@
 5.  Bilibili-不登录-最高画质：无限试用最高画质-无需登录，会自动退出账号；
 
 **注：此处所有脚本内均无更新链接**
+
+# 下载合集
+
+[Gitee](https://gitee.com/lhj1618/js-win/releases/) - [Github](https://github.com/lhj1618GitHub/js-win/releases)
