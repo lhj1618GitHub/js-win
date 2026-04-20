@@ -2,7 +2,7 @@
 // @name:zh-CN   切换搜索引擎-工具栏
 // @name         Search Bar
 // @author       lhj1618
-// @version      1.5.1
+// @version      2.5.1
 // @description  适用于手机X浏览器，可读取X浏览器的搜索引擎设置，支持隐藏搜索引擎
 // @match        *://*/*
 // @run-at       document-end
@@ -11,6 +11,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_EX_getSearchEngines
 // ==/UserScript==
+
 (function () {
     'use strict';
     const STORAGE_KEY = 'quick_search_bar_fixed_final';
@@ -19,30 +20,38 @@
     let lastScrollTop = 0;
     let toolbarHost = null;
     let toolbarVisible = true;
-    // 稳定 ID
-    function stableId(name, host) {
-        let str = (name || '') + '|' + (host || '');
+
+    // 稳定 ID（根据 URL 生成，确保唯一）
+    function stableId(url) {
+        let str = (url || '');
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
         }
         return 'se_' + Math.abs(hash).toString(36);
     }
+
     // 默认引擎
     const defaultEngines = [
-        { name:'百度',host:'baidu.com',url:'https://www.baidu.com/s?word=%keywords%' },
-        { name:'Bing',host:'bing.com',url:'https://www.bing.com/search?q=%keywords%' },
+        { name: '百度',     host: 'baidu.com',    url: 'https://www.baidu.com/s?word=%keywords%' },
+        { name: 'Google',   host: 'google.com',   url: 'https://www.google.com/search?q=%keywords%' },
+        { name: 'Bing',     host: 'bing.com',     url: 'https://www.bing.com/search?q=%keywords%' },
+        { name: '360搜索',  host: 'so.com',       url: 'https://www.so.com/s?q=%keywords%' },
+        { name: '神马',     host: 'sm.cn',        url: 'https://m.sm.cn/s?q=%keywords%' },
+        { name: 'DuckDuckGo', host: 'duckduckgo.com', url: 'https://duckduckgo.com/?q=%keywords%' },
         { name:'Gitcode',host:'gitcode.com',url:'https://gitcode.com/search?q=%keywords%' },
         { name:'Gitee',host:'gitee.com',url:'https://so.gitee.com/?q=%keywords%' },
         { name:'Github',host:'github.com',url:'https://github.com/search?q=%keywords%' },
+
     ];
+
     // 读取 XBrowser 引擎
-    let rawEngines = [];
+    let xBrowserEngines = [];
     if (typeof GM_EX_getSearchEngines === 'function') {
         try {
             const list = JSON.parse(GM_EX_getSearchEngines());
             if (Array.isArray(list) && list.length > 0) {
-                rawEngines = list.map(e => ({
+                xBrowserEngines = list.map(e => ({
                     name: e.name || '未知',
                     host: e.host || '',
                     url:  e.url  || ''
@@ -50,27 +59,47 @@
             }
         } catch (e) {}
     }
-    if (rawEngines.length === 0) rawEngines = defaultEngines;
+
+    // ==============================================
+    // 【已修改】去重逻辑：URL 相同则去重
+    // ==============================================
+    const mergedMap = new Map();
+
+    // 优先加入 XBrowser 引擎
+    xBrowserEngines.forEach(engine => {
+        const id = stableId(engine.host);
+        mergedMap.set(id, engine);
+    });
+
+    // 补充默认引擎（仅 URL 不存在时添加）
+    defaultEngines.forEach(engine => {
+        const id = stableId(engine.host);
+        if (!mergedMap.has(id)) {
+            mergedMap.set(id, engine);
+        }
+    });
+
+    const rawEngines = Array.from(mergedMap.values());
+
     // 读取保存设置
     const saved = GM_getValue(STORAGE_KEY) || { hidden: [] };
     const hiddenSet = new Set(saved.hidden || []);
-    // 合并并生成稳定 ID
-    const searchEngines = rawEngines.map(engine => {
-        const id = stableId(engine.name, engine.host);
-        return {
-            id,
-            name: engine.name,
-            host: engine.host,
-            url: engine.url,
-            visible: !hiddenSet.has(id)
-        };
-    });
+
+    // 生成最终搜索引擎列表
+    const searchEngines = rawEngines.map(engine => ({
+        id: stableId(engine.host),
+        name: engine.name,
+        host: engine.host,
+        url: engine.url,
+        visible: !hiddenSet.has(stableId(engine.host))
+    }));
 
     function saveSettings() {
         GM_setValue(STORAGE_KEY, {
             hidden: searchEngines.filter(e => !e.visible).map(e => e.id)
         });
     }
+
     GM_registerMenuCommand("管理搜索引擎", showManager);
 
     function showManager() {
@@ -99,6 +128,7 @@
         };
         renderList(box.querySelector('#list'));
     }
+
     function renderList(container) {
         container.innerHTML = '';
         searchEngines.forEach((engine) => {
@@ -123,6 +153,7 @@
             };
         });
     }
+
     function getCurrentInfo() {
         const url = location.href;
         const host = location.host;
@@ -139,15 +170,16 @@
         }
         return null;
     }
+
     // 滚动控制函数
     function handleScroll() {
         if (!toolbarHost) return;
-
+        
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
         const scrollingDown = scrollTop > lastScrollTop;
-
+        
         const scrollThreshold = 10;
-
+        
         if (scrollingDown && scrollTop - lastScrollTop > scrollThreshold) {
             if (toolbarVisible) {
                 toolbarHost.style.transform = 'translateY(100%)';
@@ -155,13 +187,14 @@
             }
         } else if (!scrollingDown && lastScrollTop - scrollTop > scrollThreshold) {
             if (!toolbarVisible) {
-                toolbarHost.style.transform = 'translateY(0)';
+                toolbarHost.style.transform = 'translateY(-50%)';
                 toolbarVisible = true;
             }
         }
-
+        
         lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
     }
+
     function createToolbar(info) {
         const { engine: currentEngine, rawQuery } = info;
         toolbarHost = document.createElement('div');
@@ -172,7 +205,7 @@
             .toolbar-content{
                 display:flex;
                 width:100%;
-                box-sizing:border-box;
+                thebox-sizing:border-box;
                 overflow-x:auto;
                 overflow-y:hidden;
                 background:rgba(255,255,255,0.95);
@@ -185,7 +218,7 @@
                 box-shadow:0 -2px 20px rgba(0,0,0,0.08);
             }
             .toolbar-content::-webkit-scrollbar{display:none;}
-
+            
             a{
                 display:inline-flex;
                 align-items:center;
@@ -219,7 +252,7 @@
                 font-weight:600;
                 transform:translateY(-1px);
             }
-
+            
             .manage-btn{
                 display:inline-flex;
                 align-items:center;
@@ -243,7 +276,7 @@
                 box-shadow:0 3px 8px rgba(0,0,0,0.1);
                 color:#333;
             }
-
+            
             .separator{
                 height:20px;
                 width:1px;
@@ -251,12 +284,12 @@
                 margin:0 12px;
                 opacity:0.6;
             }
-
+            
             a:focus, .manage-btn:focus, button:focus {
                 outline: none !important;
                 box-shadow: none !important;
             }
-
+            
             @media(max-width:768px){
                 .toolbar-content{height:44px;}
                 a,.manage-btn{
@@ -293,21 +326,22 @@
         const sep = document.createElement('div');
         sep.className = 'separator';
         content.appendChild(sep);
-
-        // 纯文本齿轮图标按钮
+        
+        // 齿轮按钮
         const btn = document.createElement('div');
         btn.className = 'manage-btn';
         btn.textContent = '⚙️';
         btn.title = '管理搜索引擎';
         btn.onclick = showManager;
         content.appendChild(btn);
-
+        
         shadow.appendChild(content);
         document.body.appendChild(toolbarHost);
         document.body.style.paddingBottom = '55px';
         lastScrollTop = window.pageYOffset || document.documentElement.scrollTop;
         window.addEventListener('scroll', handleScroll, { passive: true });
     }
+
     const info = getCurrentInfo();
     if (info) createToolbar(info);
 })();
